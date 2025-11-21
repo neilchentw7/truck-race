@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Synthwave Mixer: Audio Edition</title>
+    <title>Synthwave Mixer: Outrun Edition v5</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: none; user-select: none; -webkit-user-select: none; }
         
+        /* Canvas should be in background */
+        canvas {
+            position: fixed; top: 0; left: 0; z-index: 0;
+        }
+
         /* UI Overlay */
         #ui-container {
             position: absolute;
@@ -63,6 +68,7 @@
             border: 3px solid #00f6ff; border-radius: 50%; color: #00f6ff;
             font-size: 30px; display: flex; align-items: center; justify-content: center;
             cursor: pointer; backdrop-filter: blur(2px); box-shadow: 0 0 10px rgba(0, 246, 255, 0.3);
+            touch-action: manipulation;
         }
         .btn-touch:active, .btn-touch.active { background: rgba(0, 246, 255, 0.4); color: white; transform: scale(0.95); box-shadow: 0 0 20px #00f6ff; }
         .d-pad-right .btn-touch { border-color: #ff00de; color: #ff00de; box-shadow: 0 0 10px rgba(255, 0, 222, 0.3); }
@@ -70,17 +76,21 @@
 
         @media (max-height: 500px) { .hud-panel { transform: scale(0.7); } }
 
-        /* Start Screen Overlay */
+        /* Start Screen Overlay - FIXED Z-INDEX & POINTER EVENTS */
         #start-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 100;
+            background: rgba(0,0,0,0.85); 
+            z-index: 9999; /* Highest priority */
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: #fff; text-align: center;
+            pointer-events: auto; /* Ensure it captures clicks */
         }
         #start-btn {
             font-size: 20px; padding: 20px 40px; background: transparent; border: 4px solid #00f6ff;
             color: #00f6ff; text-shadow: 0 0 10px #00f6ff; box-shadow: 0 0 20px #00f6ff;
+            cursor: pointer;
             animation: pulse 1s infinite alternate;
+            pointer-events: auto;
         }
         @keyframes pulse { from { box-shadow: 0 0 10px #00f6ff; } to { box-shadow: 0 0 30px #00f6ff, 0 0 10px #fff; } }
 
@@ -148,14 +158,14 @@
     import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
     import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
 
-    // --- Audio Engine (Web Audio API) ---
+    // --- Audio Engine ---
     const AudioEngine = {
         ctx: null,
         isPlaying: false,
         nextNoteTime: 0,
-        tempo: 145, // Fast Punk Tempo
+        tempo: 145,
         noteIndex: 0,
-        bassSequence: [36, 36, 36, 36, 39, 39, 41, 41], // C2, Eb2, F2
+        bassSequence: [36, 36, 36, 36, 39, 39, 41, 41],
         timerID: null,
         lookahead: 25.0,
         scheduleAheadTime: 0.1,
@@ -166,6 +176,7 @@
         },
 
         playTone: function(freq, time, duration, type = 'sawtooth', vol = 0.1) {
+            if (!this.ctx) return;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = type;
@@ -179,6 +190,7 @@
         },
 
         playDrum: function(time, type) {
+            if (!this.ctx) return;
             const gain = this.ctx.createGain();
             gain.connect(this.ctx.destination);
             
@@ -192,19 +204,17 @@
                 osc.start(time);
                 osc.stop(time + 0.5);
             } else if (type === 'snare') {
-                const bufferSize = this.ctx.sampleRate * 0.5; // 0.5 sec noise
+                const bufferSize = this.ctx.sampleRate * 0.5;
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
                 const noise = this.ctx.createBufferSource();
                 noise.buffer = buffer;
-                // Filter for "industrial" snare
                 const filter = this.ctx.createBiquadFilter();
                 filter.type = 'highpass';
                 filter.frequency.value = 1000;
                 noise.connect(filter);
                 filter.connect(gain);
-                
                 gain.gain.setValueAtTime(0.3, time);
                 gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
                 noise.start(time);
@@ -221,30 +231,18 @@
 
         nextNote: function() {
             const secondsPerBeat = 60.0 / this.tempo;
-            this.nextNoteTime += 0.25 * secondsPerBeat; // 16th notes
+            this.nextNoteTime += 0.25 * secondsPerBeat;
             this.noteIndex++;
             if (this.noteIndex === 16) { this.noteIndex = 0; }
         },
 
         scheduleNote: function(beatNumber, time) {
-            // Simple Punk/Industrial Pattern
-            // Kick on 0, 4, 8, 12 (Quarter notes)
-            if (beatNumber % 4 === 0) {
-                this.playDrum(time, 'kick');
-            }
-            // Snare on 4, 12 (Backbeat)
-            if (beatNumber === 4 || beatNumber === 12) {
-                this.playDrum(time, 'snare');
-            }
-
-            // Driving Bassline (8th notes)
+            if (beatNumber % 4 === 0) this.playDrum(time, 'kick');
+            if (beatNumber === 4 || beatNumber === 12) this.playDrum(time, 'snare');
             if (beatNumber % 2 === 0) {
-                // Map MIDI note to Freq
                 const midi = this.bassSequence[Math.floor(beatNumber/2) % 8];
                 const freq = 440 * Math.pow(2, (midi - 69) / 12);
-                // Distorted Bass sound (Sawtooth)
                 this.playTone(freq, time, 0.2, 'sawtooth', 0.15);
-                // Sub bass (Sine)
                 this.playTone(freq/2, time, 0.2, 'sine', 0.3);
             }
         },
@@ -265,40 +263,31 @@
         playTurboSFX: function() {
             if (!this.ctx) return;
             const t = this.ctx.currentTime;
-            
-            // 1. Rising Oscillator (The "Engine" sound)
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(100, t);
-            osc.frequency.linearRampToValueAtTime(600, t + 1.5); // Rise pitch
-            
+            osc.frequency.linearRampToValueAtTime(600, t + 1.5);
             gain.gain.setValueAtTime(0.1, t);
             gain.gain.linearRampToValueAtTime(0.0, t + 1.5);
-            
             osc.connect(gain);
             gain.connect(this.ctx.destination);
             osc.start(t);
             osc.stop(t + 1.5);
 
-            // 2. White Noise Sweep (The "Air" sound)
             const bufferSize = this.ctx.sampleRate * 1.5;
             const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            
             const noise = this.ctx.createBufferSource();
             noise.buffer = buffer;
-            
             const filter = this.ctx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(400, t);
-            filter.frequency.linearRampToValueAtTime(5000, t + 1.0); // Open filter
-            
+            filter.frequency.linearRampToValueAtTime(5000, t + 1.0);
             const nGain = this.ctx.createGain();
             nGain.gain.setValueAtTime(0.2, t);
             nGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
-
             noise.connect(filter);
             filter.connect(nGain);
             nGain.connect(this.ctx.destination);
@@ -308,13 +297,7 @@
 
     // --- Configuration & State ---
     const CONFIG = {
-        speed: 60,
-        turnSpeed: 0.8,
-        tiltFactor: 0.3,
-        fovBase: 60,
-        fovTurbo: 90,
-        horizonZ: -250,
-        cameraZPass: 20
+        speed: 60, turnSpeed: 0.8, tiltFactor: 0.3, fovBase: 60, fovTurbo: 90, horizonZ: -250, cameraZPass: 20
     };
 
     const THEMES = [
@@ -324,13 +307,7 @@
     ];
 
     let currentThemeIdx = 0;
-    let gameState = {
-        speed: 0.5, 
-        realSpeed: 60,
-        steering: 0,
-        turbo: false,
-        turboTriggered: false
-    };
+    let gameState = { speed: 0.5, realSpeed: 60, steering: 0, turbo: false, turboTriggered: false };
 
     // --- Scene Setup ---
     const scene = new THREE.Scene();
@@ -395,32 +372,50 @@
     // --- Inputs ---
     const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, " ": false };
     window.addEventListener('keydown', (e) => keys[e.key] = true); window.addEventListener('keyup', (e) => keys[e.key] = false);
-    // Touch Events
     const touchBtns = document.querySelectorAll('.btn-touch');
     touchBtns.forEach(btn => {
         const key = btn.getAttribute('data-key');
-        const press = (e) => { e.preventDefault(); keys[key] = true; btn.classList.add('active'); };
-        const release = (e) => { e.preventDefault(); keys[key] = false; btn.classList.remove('active'); };
+        const press = (e) => { if(e.cancelable) e.preventDefault(); keys[key] = true; btn.classList.add('active'); };
+        const release = (e) => { if(e.cancelable) e.preventDefault(); keys[key] = false; btn.classList.remove('active'); };
         btn.addEventListener('mousedown', press); btn.addEventListener('mouseup', release); btn.addEventListener('mouseleave', release);
         btn.addEventListener('touchstart', press); btn.addEventListener('touchend', release);
     });
 
     // --- UI Logic ---
     let cameraMode = 'chase'; let glitchEnabled = false;
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('start-btn').addEventListener('click', () => {
-        document.getElementById('start-screen').style.display = 'none';
-        AudioEngine.init();
-        AudioEngine.start();
-        document.getElementById('btn-audio').innerText = '音樂：開啟';
+    
+    // *** FIXED START BUTTON LOGIC ***
+    const startGame = () => {
+        // 1. Hide Screen immediately
+        const startScreen = document.getElementById('start-screen');
+        if (startScreen) startScreen.style.display = 'none';
+        
+        // 2. Try to start audio, catch errors so game doesn't freeze
+        try {
+            AudioEngine.init();
+            AudioEngine.start();
+            document.getElementById('btn-audio').innerText = '音樂：開啟';
+        } catch (e) {
+            console.log("Audio start failed:", e);
+            document.getElementById('btn-audio').innerText = '音樂：失敗 (點此重試)';
+        }
+    };
+
+    const startBtn = document.getElementById('start-btn');
+    startBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('touchstart', (e) => {
+        // Prevent ghost clicks on mobile
+        e.preventDefault(); 
+        startGame();
     });
 
     document.getElementById('btn-theme').addEventListener('click', () => { currentThemeIdx = (currentThemeIdx + 1) % THEMES.length; const t = THEMES[currentThemeIdx]; document.getElementById('btn-theme').innerText = `切換主題：${t.name}`; scene.fog.color.setHex(t.fog); gridUniforms.color.value.setHex(t.grid); sunMat.uniforms.colorTop.value.setHex(t.sunTop); sunMat.uniforms.colorBot.value.setHex(t.sunBot); pointLight.color.setHex(t.grid); buildings.forEach(b => b.material.color.setHex(t.grid)); });
     document.getElementById('btn-camera').addEventListener('click', () => { cameraMode = cameraMode === 'chase' ? 'free' : 'chase'; document.getElementById('btn-camera').innerText = `模式：${cameraMode === 'chase' ? '追車 (居中)' : '自由 (跟隨)'}`; });
     document.getElementById('btn-glitch').addEventListener('click', () => { glitchEnabled = !glitchEnabled; document.getElementById('btn-glitch').innerText = `特效：${glitchEnabled ? '開啟' : '關閉'}`; filmPass.enabled = glitchEnabled; document.getElementById('css-scanlines').style.display = glitchEnabled ? 'block' : 'none'; document.getElementById('css-vignette').style.display = glitchEnabled ? 'block' : 'none'; });
     document.getElementById('btn-audio').addEventListener('click', () => { 
-        if (!AudioEngine.ctx) return;
-        if (AudioEngine.isPlaying) { AudioEngine.stop(); document.getElementById('btn-audio').innerText = '音樂：靜音'; }
+        if (!AudioEngine.ctx) {
+            try { AudioEngine.init(); AudioEngine.start(); document.getElementById('btn-audio').innerText = '音樂：開啟'; } catch(e){console.log(e);}
+        } else if (AudioEngine.isPlaying) { AudioEngine.stop(); document.getElementById('btn-audio').innerText = '音樂：靜音'; }
         else { AudioEngine.start(); document.getElementById('btn-audio').innerText = '音樂：開啟'; }
     });
     document.getElementById('slider-bloom').addEventListener('input', (e) => bloomPass.strength = parseFloat(e.target.value));
@@ -435,7 +430,6 @@
         if (keys.ArrowUp || keys.w || keys[" "]) { 
             gameState.speed = Math.min(gameState.speed + 0.02, 1.5); 
             gameState.turbo = true;
-            // Trigger Sound once when Turbo starts
             if (!gameState.turboTriggered && gameState.speed > 1.0) {
                 AudioEngine.playTurboSFX();
                 gameState.turboTriggered = true;
