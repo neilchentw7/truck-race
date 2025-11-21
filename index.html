@@ -3,47 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Synthwave Mixer: Outrun Edition v6</title>
+    <title>Synthwave Mixer: Coin Rush Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: none; user-select: none; -webkit-user-select: none; }
         
-        /* Canvas fixed to back */
         canvas { position: fixed; top: 0; left: 0; z-index: 0; }
 
-        /* UI Overlay Container */
+        /* UI Overlay */
         #ui-container {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            /* Removed flex layout constraints to allow absolute positioning of children */
-            z-index: 20;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 20;
         }
 
-        /* Left HUD Panel */
+        /* Left Control Panel */
         .hud-panel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 250px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #00f6ff;
-            padding: 15px;
-            pointer-events: auto;
-            border-radius: 5px;
-            box-shadow: 0 0 10px #00f6ff;
+            position: absolute; top: 20px; left: 20px; width: 250px;
+            background: rgba(0, 0, 0, 0.6); border: 2px solid #00f6ff; padding: 15px;
+            pointer-events: auto; border-radius: 5px; box-shadow: 0 0 10px #00f6ff;
             transform-origin: top left;
         }
 
-        /* Right Top Speedometer (Moved Here) */
+        /* Top Right Speedometer */
         #speed-hud {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-align: right;
-            pointer-events: none;
+            position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: none;
         }
+
+        /* Top Center Score & Time */
+        #game-stats {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            text-align: center; width: 300px; pointer-events: none;
+            display: flex; justify-content: space-around;
+            text-shadow: 2px 2px 0 #ff00de;
+        }
+        .stat-box { background: rgba(0,0,0,0.5); padding: 10px; border: 2px solid #ffe600; border-radius: 5px; }
+        .stat-label { font-size: 10px; color: #ffe600; display: block; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; color: #fff; }
 
         h1 { font-size: 24px; margin: 0 0 10px 0; background: linear-gradient(to right, #ff00de, #00f6ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .controls-hint { font-size: 10px; color: #ccc; line-height: 1.5; }
@@ -51,8 +47,7 @@
         button {
             background: #ff00de; color: white; border: none; padding: 8px 12px;
             font-family: 'Press Start 2P'; font-size: 10px; cursor: pointer;
-            margin-top: 5px; width: 100%; text-transform: uppercase;
-            transition: 0.2s;
+            margin-top: 5px; width: 100%; text-transform: uppercase; transition: 0.2s;
         }
         button:hover { background: #fff; color: #ff00de; box-shadow: 0 0 10px #fff; }
         button:active { transform: scale(0.95); }
@@ -74,8 +69,7 @@
             width: 70px; height: 70px; background: rgba(0, 0, 0, 0.3);
             border: 3px solid #00f6ff; border-radius: 50%; color: #00f6ff;
             font-size: 30px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; backdrop-filter: blur(2px); box-shadow: 0 0 10px rgba(0, 246, 255, 0.3);
-            touch-action: manipulation;
+            cursor: pointer; backdrop-filter: blur(2px); box-shadow: 0 0 10px rgba(0, 246, 255, 0.3); touch-action: manipulation;
         }
         .btn-touch:active, .btn-touch.active { background: rgba(0, 246, 255, 0.4); color: white; transform: scale(0.95); box-shadow: 0 0 20px #00f6ff; }
         .d-pad-right .btn-touch { border-color: #ff00de; color: #ff00de; box-shadow: 0 0 10px rgba(255, 0, 222, 0.3); }
@@ -83,19 +77,17 @@
 
         @media (max-height: 500px) { .hud-panel { transform: scale(0.7); } }
 
-        /* Start Screen Overlay */
-        #start-screen {
+        /* Screens */
+        .overlay-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); 
-            z-index: 9999; 
+            background: rgba(0,0,0,0.85); z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #fff; text-align: center;
-            pointer-events: auto;
+            color: #fff; text-align: center; pointer-events: auto;
         }
-        #start-btn {
+        .big-btn {
             font-size: 20px; padding: 20px 40px; background: transparent; border: 4px solid #00f6ff;
             color: #00f6ff; text-shadow: 0 0 10px #00f6ff; box-shadow: 0 0 20px #00f6ff;
-            cursor: pointer; animation: pulse 1s infinite alternate; pointer-events: auto;
+            cursor: pointer; animation: pulse 1s infinite alternate; margin-top: 20px;
         }
         @keyframes pulse { from { box-shadow: 0 0 10px #00f6ff; } to { box-shadow: 0 0 30px #00f6ff, 0 0 10px #fff; } }
 
@@ -105,10 +97,17 @@
 </head>
 <body>
 
-<div id="start-screen">
-    <h1 style="font-size: 40px; margin-bottom: 40px;">OUTRUN MIXER</h1>
-    <button id="start-btn">點擊開始 / INSERT COIN</button>
+<div id="start-screen" class="overlay-screen">
+    <h1 style="font-size: 40px; margin-bottom: 20px;">OUTRUN MIXER</h1>
+    <p style="color: #ffe600; margin-bottom: 30px;">蒐集金幣 ! 60秒限時挑戰 !</p>
+    <button id="start-btn" class="big-btn">點擊開始 / INSERT COIN</button>
     <p style="margin-top: 20px; font-size: 12px; color: #aaa;">開啟音效以獲得最佳體驗</p>
+</div>
+
+<div id="game-over-screen" class="overlay-screen" style="display: none;">
+    <h1 style="font-size: 40px; color: #ff00de;">TIME UP!</h1>
+    <div style="font-size: 20px; margin: 20px;">最終得分: <span id="final-score" style="color: #ffe600; font-size: 30px;">0</span></div>
+    <button id="restart-btn" class="big-btn">再來一次 / RESTART</button>
 </div>
 
 <div class="scanlines" id="css-scanlines"></div>
@@ -128,6 +127,17 @@
         <label>音樂 / 音效</label> <button id="btn-audio">靜音</button>
         <label>炫光強度 (Bloom)</label> <input type="range" id="slider-bloom" min="0" max="3" step="0.1" value="1.0">
         <label>環境亮度/對比</label> <input type="range" id="slider-brightness" min="0.5" max="2" step="0.1" value="1.1">
+    </div>
+
+    <div id="game-stats">
+        <div class="stat-box">
+            <span class="stat-label">SCORE</span>
+            <span id="score-display" class="stat-value">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">TIME</span>
+            <span id="time-display" class="stat-value">60</span>
+        </div>
     </div>
 
     <div id="speed-hud">
@@ -199,7 +209,6 @@
             if (!this.ctx) return;
             const gain = this.ctx.createGain();
             gain.connect(this.ctx.destination);
-            
             if (type === 'kick') {
                 const osc = this.ctx.createOscillator();
                 osc.frequency.setValueAtTime(150, time);
@@ -253,19 +262,6 @@
             }
         },
 
-        start: function() {
-            if (this.ctx.state === 'suspended') this.ctx.resume();
-            this.isPlaying = true;
-            this.noteIndex = 0;
-            this.nextNoteTime = this.ctx.currentTime + 0.1;
-            this.scheduler();
-        },
-
-        stop: function() {
-            this.isPlaying = false;
-            clearTimeout(this.timerID);
-        },
-
         playTurboSFX: function() {
             if (!this.ctx) return;
             const t = this.ctx.currentTime;
@@ -280,30 +276,42 @@
             gain.connect(this.ctx.destination);
             osc.start(t);
             osc.stop(t + 1.5);
+        },
 
-            const bufferSize = this.ctx.sampleRate * 1.5;
-            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            const noise = this.ctx.createBufferSource();
-            noise.buffer = buffer;
-            const filter = this.ctx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(400, t);
-            filter.frequency.linearRampToValueAtTime(5000, t + 1.0);
-            const nGain = this.ctx.createGain();
-            nGain.gain.setValueAtTime(0.2, t);
-            nGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
-            noise.connect(filter);
-            filter.connect(nGain);
-            nGain.connect(this.ctx.destination);
-            noise.start(t);
+        playCoinSFX: function() {
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1200, t);
+            osc.frequency.exponentialRampToValueAtTime(2000, t + 0.1);
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.3);
+        },
+
+        start: function() {
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+            this.isPlaying = true;
+            this.noteIndex = 0;
+            this.nextNoteTime = this.ctx.currentTime + 0.1;
+            this.scheduler();
+        },
+
+        stop: function() {
+            this.isPlaying = false;
+            clearTimeout(this.timerID);
         }
     };
 
     // --- Configuration & State ---
     const CONFIG = {
-        speed: 60, turnSpeed: 0.8, tiltFactor: 0.3, fovBase: 60, fovTurbo: 90, horizonZ: -250, cameraZPass: 20
+        speed: 60, turnSpeed: 0.8, tiltFactor: 0.3, fovBase: 60, fovTurbo: 90, horizonZ: -250, cameraZPass: 20,
+        gameDuration: 60
     };
 
     const THEMES = [
@@ -313,7 +321,11 @@
     ];
 
     let currentThemeIdx = 0;
-    let gameState = { speed: 0.5, realSpeed: 60, steering: 0, turbo: false, turboTriggered: false };
+    let gameState = { 
+        isPlaying: false,
+        speed: 0.5, realSpeed: 60, steering: 0, turbo: false, turboTriggered: false,
+        score: 0, timeLeft: CONFIG.gameDuration
+    };
 
     // --- Scene Setup ---
     const scene = new THREE.Scene();
@@ -327,14 +339,12 @@
     document.body.appendChild(renderer.domElement);
 
     // --- Assets ---
-    // Road
     const gridVertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
     const gridFragmentShader = `uniform float time; uniform vec3 color; varying vec2 vUv; void main() { vec2 grid = abs(fract(vUv * vec2(1.0, 20.0) + vec2(0.0, time)) - 0.5) / fwidth(vUv * vec2(1.0, 20.0)); float line = min(grid.x, grid.y); float fade = 1.0 - vUv.y; gl_FragColor = vec4(color * (1.0 - min(line, 1.0)), fade * max(0.0, (1.0 - min(line, 1.0)))); }`;
     const gridUniforms = { time: { value: 0 }, color: { value: new THREE.Color(THEMES[0].grid) } };
     const road = new THREE.Mesh(new THREE.PlaneGeometry(40, 300).rotateX(-Math.PI / 2).translate(0,0,-100), new THREE.ShaderMaterial({ uniforms: gridUniforms, vertexShader: gridVertexShader, fragmentShader: gridFragmentShader, transparent: true, side: THREE.DoubleSide }));
     scene.add(road);
 
-    // Sun
     const sunMat = new THREE.ShaderMaterial({ uniforms: { colorTop: { value: new THREE.Color(THEMES[0].sunTop) }, colorBot: { value: new THREE.Color(THEMES[0].sunBot) } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`, fragmentShader: `uniform vec3 colorTop; uniform vec3 colorBot; varying vec2 vUv; void main() { float y = vUv.y; float stripe = step(0.5, sin(y * 40.0)); if (y < 0.5 && stripe < 0.1) discard; gl_FragColor = vec4(mix(colorBot, colorTop, y), 1.0); }`, transparent: true });
     const sun = new THREE.Mesh(new THREE.CircleGeometry(25, 32), sunMat);
     sun.position.set(0, 15, -200); scene.add(sun);
@@ -345,11 +355,34 @@
     function resetBuilding(b) { b.position.z = CONFIG.horizonZ + Math.random() * 50; const side = Math.random() > 0.5 ? 1 : -1; b.position.x = side * (20 + Math.random() * 15); b.scale.set(5 + Math.random() * 10, 10 + Math.random() * 40, 5 + Math.random() * 10); if (b.material) b.material.color.setHex(THEMES[currentThemeIdx].grid); }
     for (let i = 0; i < 30; i++) { const mat = new THREE.MeshBasicMaterial({ color: THEMES[0].grid, wireframe: true, transparent: true, opacity: 0.6, fog: true }); const b = new THREE.Mesh(buildingGeo, mat); resetBuilding(b); b.position.z = CONFIG.horizonZ + (i / 30) * (CONFIG.cameraZPass - CONFIG.horizonZ); scene.add(b); buildings.push(b); }
 
+    // --- Coins ---
+    const coins = [];
+    const coinGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.1, 16);
+    coinGeo.rotateX(Math.PI / 2); // Face camera
+    const coinMat = new THREE.MeshBasicMaterial({ color: 0xffd700 }); // Gold
+
+    function spawnCoin(c) {
+        c.position.z = CONFIG.horizonZ + Math.random() * 50;
+        c.position.x = (Math.random() - 0.5) * 20; // Spread across road
+        c.visible = true;
+    }
+
+    // Create 20 active coins (recycling pool)
+    for (let i = 0; i < 20; i++) {
+        const c = new THREE.Mesh(coinGeo, coinMat);
+        spawnCoin(c);
+        c.position.z = CONFIG.horizonZ + (i / 20) * (CONFIG.cameraZPass - CONFIG.horizonZ);
+        scene.add(c);
+        coins.push(c);
+    }
+
     // Truck
     const truckGroup = new THREE.Group();
     const chassisMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2 });
     const cabinMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, metalness: 0.5 });
-    const drumMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.4, flatShading: true });
+    // NEW: Lake Blue Drum Color
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x00aacc, roughness: 0.3, metalness: 0.4, flatShading: true });
+    
     const chassis = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 6), chassisMat); chassis.position.y = 0.8; truckGroup.add(chassis);
     const cabin = new THREE.Mesh(new THREE.BoxGeometry(2, 1.8, 1.5), cabinMat); cabin.position.set(0, 1.8, -1.8); truckGroup.add(cabin);
     const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.8, 0.1), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0, metalness: 0.9 })); windshield.position.set(0, 2.0, -2.56); truckGroup.add(windshield);
@@ -360,7 +393,7 @@
     const hlMat = new THREE.MeshBasicMaterial({color:0xffff00}); truckGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.4,0.2,0.1), hlMat).position.set(0.6,1.2,-2.55)); truckGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.4,0.2,0.1), hlMat).position.set(-0.6,1.2,-2.55));
     const tlMat = new THREE.MeshBasicMaterial({color:0xff0000}); truckGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.3,0.1,0.1), tlMat).position.set(0.6,1.0,3.0)); truckGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.3,0.1,0.1), tlMat).position.set(-0.6,1.0,3.0));
     
-    truckGroup.scale.set(0.5, 0.5, 0.5); // Scale down truck by 50%
+    truckGroup.scale.set(0.5, 0.5, 0.5); // 50% scale
     scene.add(truckGroup);
 
     // Lights
@@ -390,17 +423,42 @@
         btn.addEventListener('touchstart', press); btn.addEventListener('touchend', release);
     });
 
-    // --- UI Logic ---
-    let cameraMode = 'chase'; let glitchEnabled = false;
-    
+    // --- Game Functions ---
+    const updateUI = () => {
+        document.getElementById('score-display').innerText = gameState.score;
+        document.getElementById('time-display').innerText = Math.ceil(gameState.timeLeft);
+    };
+
     const startGame = () => {
-        const startScreen = document.getElementById('start-screen');
-        if (startScreen) startScreen.style.display = 'none';
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-over-screen').style.display = 'none';
+        
+        // Reset State
+        gameState.isPlaying = true;
+        gameState.timeLeft = CONFIG.gameDuration;
+        gameState.score = 0;
+        gameState.speed = 0.5;
+        truckGroup.position.x = 0;
+        updateUI();
+
+        // Reset Coins
+        coins.forEach(c => spawnCoin(c));
+
         try { AudioEngine.init(); AudioEngine.start(); document.getElementById('btn-audio').innerText = '音樂：開啟'; } catch (e) { console.log("Audio error", e); }
     };
-    const startBtn = document.getElementById('start-btn');
-    startBtn.addEventListener('click', startGame);
-    startBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startGame(); });
+
+    const gameOver = () => {
+        gameState.isPlaying = false;
+        AudioEngine.stop();
+        document.getElementById('game-over-screen').style.display = 'flex';
+        document.getElementById('final-score').innerText = gameState.score;
+    };
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('start-btn').addEventListener('touchstart', (e) => { e.preventDefault(); startGame(); });
+    
+    document.getElementById('restart-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('touchstart', (e) => { e.preventDefault(); startGame(); });
 
     document.getElementById('btn-theme').addEventListener('click', () => { currentThemeIdx = (currentThemeIdx + 1) % THEMES.length; const t = THEMES[currentThemeIdx]; document.getElementById('btn-theme').innerText = `切換主題：${t.name}`; scene.fog.color.setHex(t.fog); gridUniforms.color.value.setHex(t.grid); sunMat.uniforms.colorTop.value.setHex(t.sunTop); sunMat.uniforms.colorBot.value.setHex(t.sunBot); pointLight.color.setHex(t.grid); buildings.forEach(b => b.material.color.setHex(t.grid)); });
     document.getElementById('btn-camera').addEventListener('click', () => { cameraMode = cameraMode === 'chase' ? 'free' : 'chase'; document.getElementById('btn-camera').innerText = `模式：${cameraMode === 'chase' ? '追車 (居中)' : '自由 (跟隨)'}`; });
@@ -419,29 +477,69 @@
         requestAnimationFrame(animate);
         const delta = clock.getDelta(); const time = clock.getElapsedTime();
         
-        if (keys.ArrowUp || keys.w || keys[" "]) { 
-            gameState.speed = Math.min(gameState.speed + 0.02, 1.5); 
-            gameState.turbo = true;
-            if (!gameState.turboTriggered && gameState.speed > 1.0) { AudioEngine.playTurboSFX(); gameState.turboTriggered = true; }
-        } else { 
-            gameState.speed = Math.max(gameState.speed - 0.01, 0.5); 
-            gameState.turbo = false;
-            gameState.turboTriggered = false;
-        }
-        
-        let steerInput = 0; if (keys.ArrowLeft || keys.a) steerInput = -1; if (keys.ArrowRight || keys.d) steerInput = 1;
-        gameState.steering += (steerInput - gameState.steering) * 0.1;
-        gameState.realSpeed = Math.floor(CONFIG.speed + (gameState.speed - 0.5) * 100);
-        document.getElementById('speedometer').innerText = `${gameState.realSpeed} KM/H`; document.getElementById('speedometer').style.color = gameState.turbo ? '#00f6ff' : '#ffe600';
+        if (gameState.isPlaying) {
+            // Timer Logic
+            gameState.timeLeft -= delta;
+            if (gameState.timeLeft <= 0) {
+                gameState.timeLeft = 0;
+                gameOver();
+            }
+            updateUI();
 
-        drum.rotation.y += (gameState.realSpeed / 60) * 5 * delta; 
-        truckGroup.position.x += gameState.steering * CONFIG.turnSpeed * (gameState.realSpeed / 60) * delta * 10;
-        truckGroup.position.x = Math.max(-18, Math.min(18, truckGroup.position.x));
-        truckGroup.rotation.z = gameState.steering * -CONFIG.tiltFactor; truckGroup.rotation.y = gameState.steering * 0.1; truckGroup.position.y = Math.sin(time * 20) * 0.02;
-        
-        gridUniforms.time.value -= gameState.speed * 10 * delta;
-        const moveSpeed = gameState.speed * 70 * delta;
-        buildings.forEach(b => { b.position.z += moveSpeed; if (b.position.z > CONFIG.cameraZPass) { resetBuilding(b); } });
+            // Input & Physics
+            if (keys.ArrowUp || keys.w || keys[" "]) { 
+                gameState.speed = Math.min(gameState.speed + 0.02, 1.5); 
+                gameState.turbo = true;
+                if (!gameState.turboTriggered && gameState.speed > 1.0) { AudioEngine.playTurboSFX(); gameState.turboTriggered = true; }
+            } else { 
+                gameState.speed = Math.max(gameState.speed - 0.01, 0.5); 
+                gameState.turbo = false;
+                gameState.turboTriggered = false;
+            }
+            
+            let steerInput = 0; if (keys.ArrowLeft || keys.a) steerInput = -1; if (keys.ArrowRight || keys.d) steerInput = 1;
+            gameState.steering += (steerInput - gameState.steering) * 0.1;
+            gameState.realSpeed = Math.floor(CONFIG.speed + (gameState.speed - 0.5) * 100);
+            document.getElementById('speedometer').innerText = `${gameState.realSpeed} KM/H`; document.getElementById('speedometer').style.color = gameState.turbo ? '#00f6ff' : '#ffe600';
+
+            // Truck Animation
+            drum.rotation.y += (gameState.realSpeed / 60) * 5 * delta; 
+            truckGroup.position.x += gameState.steering * CONFIG.turnSpeed * (gameState.realSpeed / 60) * delta * 10;
+            truckGroup.position.x = Math.max(-18, Math.min(18, truckGroup.position.x));
+            truckGroup.rotation.z = gameState.steering * -CONFIG.tiltFactor; truckGroup.rotation.y = gameState.steering * 0.1; truckGroup.position.y = Math.sin(time * 20) * 0.02;
+            
+            // World Movement
+            gridUniforms.time.value -= gameState.speed * 10 * delta;
+            const moveSpeed = gameState.speed * 70 * delta;
+            
+            // Buildings
+            buildings.forEach(b => { b.position.z += moveSpeed; if (b.position.z > CONFIG.cameraZPass) { resetBuilding(b); } });
+
+            // Coins Logic
+            coins.forEach(c => {
+                if (!c.visible) return;
+
+                c.position.z += moveSpeed;
+                c.rotation.y += 2 * delta; // Spin coin
+
+                // Collision Detect
+                // Truck is at Z=0 (approx), X is variable. Scale is 0.5 (width approx 1.0)
+                // Coin width 1.0
+                if (Math.abs(c.position.z - truckGroup.position.z) < 2.0 && Math.abs(c.position.x - truckGroup.position.x) < 2.5) {
+                    // Hit!
+                    c.visible = false;
+                    gameState.score += 1;
+                    AudioEngine.playCoinSFX();
+                    // Reset position immediately for reuse
+                    spawnCoin(c);
+                }
+
+                // Reset if passed camera
+                if (c.position.z > CONFIG.cameraZPass) {
+                    spawnCoin(c);
+                }
+            });
+        }
 
         const targetFov = gameState.turbo ? CONFIG.fovTurbo : CONFIG.fovBase; camera.fov += (targetFov - camera.fov) * 0.05; camera.updateProjectionMatrix();
         if (cameraMode === 'chase') { camera.position.x += (0 - camera.position.x) * 0.1; camera.position.z = truckGroup.position.z + 8; camera.lookAt(0, 2, truckGroup.position.z - 10); } else { camera.position.x += ((truckGroup.position.x * 0.5) - camera.position.x) * 0.1; camera.position.z = truckGroup.position.z + 9; camera.lookAt(truckGroup.position.x, 2, truckGroup.position.z - 10); }
