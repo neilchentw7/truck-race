@@ -3,17 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Synthwave Mixer: V14 (Vertical HUD)</title>
+    <title>Synthwave Mixer: V16 (Cyan Drum & White Cabin)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: none; user-select: none; -webkit-user-select: none; }
         
+        /* Canvas fixed to back */
         canvas { position: fixed; top: 0; left: 0; z-index: -1; display: block; }
 
-        #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
+        /* UI Overlay */
+        #ui-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 20;
+        }
 
-        /* Icon Bar */
+        /* Icon Bar (Left Top) */
         #icon-bar {
             position: absolute; top: 90px; left: 20px;
             display: flex; flex-direction: column; gap: 20px; pointer-events: auto;
@@ -26,35 +31,19 @@
         }
         .icon-btn:active { transform: scale(0.9); background: rgba(0, 246, 255, 0.3); }
         
-        #speed-hud { position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: none; }
-
-        /* --- UPDATED: Top Center Score & Time (Stacked Vertically) --- */
-        #game-stats {
-            position: absolute; 
-            top: 20px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            text-align: center; 
-            width: auto; 
-            pointer-events: none;
-            display: flex; 
-            flex-direction: column; /* Changed to Vertical Stack */
-            gap: 10px; /* Space between boxes */
-            align-items: center;
-            text-shadow: 2px 2px 0 #ff00de;
+        /* Right HUD Container (Speed + Stats) */
+        #right-hud { 
+            position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: none;
+            display: flex; flex-direction: column; gap: 8px;
         }
-        .stat-box { 
-            background: rgba(0,0,0,0.5); 
-            padding: 8px 15px; 
-            border: 2px solid #ffe600; 
-            border-radius: 20px; 
-            min-width: 100px; /* Consistent width */
+        #speedometer { font-size: 32px; color: #ffe600; text-shadow: 2px 2px 0 #b20000; margin-bottom: 0px; }
+        #turbo-text { color: #00f6ff; font-size: 10px; text-shadow: 0 0 5px #00f6ff; margin-bottom: 15px; }
+        .stat-row {
+            font-size: 16px; color: #fff; text-shadow: 2px 2px 0 #ff00de;
+            background: rgba(0, 0, 0, 0.3); padding: 5px 10px;
+            border-right: 3px solid #ff00de; align-self: flex-end;
         }
-        .stat-label { font-size: 8px; color: #ffe600; display: block; margin-bottom: 3px; }
-        .stat-value { font-size: 18px; color: #fff; }
-
-        #speedometer { font-size: 24px; color: #ffe600; text-shadow: 2px 2px 0 #b20000; margin-bottom: 5px; }
-        #turbo-text { color: #00f6ff; font-size: 10px; text-shadow: 0 0 5px #00f6ff; }
+        .stat-label { font-size: 10px; color: #ffe600; margin-right: 10px; }
         
         /* D-Pad Controls */
         #touch-controls {
@@ -114,20 +103,18 @@
         <div id="btn-audio" class="icon-btn" title="開關聲音">🔇</div>
     </div>
 
-    <div id="game-stats">
-        <div class="stat-box">
-            <span class="stat-label">SCORE</span>
-            <span id="score-display" class="stat-value">0</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-label">TIME</span>
-            <span id="time-display" class="stat-value">60</span>
-        </div>
-    </div>
-
-    <div id="speed-hud">
+    <div id="right-hud">
         <div id="speedometer">60 KM/H</div>
         <div id="turbo-text">TURBO SYSTEM READY</div>
+        
+        <div class="stat-row">
+            <span class="stat-label">SCORE</span>
+            <span id="score-display">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">TIME</span>
+            <span id="time-display">60</span>
+        </div>
     </div>
 </div>
 
@@ -244,8 +231,9 @@
     // Truck
     const truckGroup = new THREE.Group();
     const chassisMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    const drumMat = new THREE.MeshStandardMaterial({ color: 0x00aacc }); 
+    // UPDATED COLORS HERE
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0xffffff }); // White Cabin
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x00FFFF }); // Cyan Drum
     
     const chassis = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 6), chassisMat); chassis.position.y = 0.8; truckGroup.add(chassis);
     const cabin = new THREE.Mesh(new THREE.BoxGeometry(2, 1.8, 1.5), cabinMat); cabin.position.set(0, 1.8, -1.8); truckGroup.add(cabin);
