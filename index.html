@@ -3,121 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Synthwave Mixer: V12 (D-Pad Layout)</title>
+    <title>Synthwave Mixer: V14 (Vertical HUD)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: none; user-select: none; -webkit-user-select: none; }
         
-        /* Canvas fixed to back */
         canvas { position: fixed; top: 0; left: 0; z-index: -1; display: block; }
 
-        /* UI Overlay */
-        #ui-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 20;
-        }
+        #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
 
-        /* --- Vertical Icon Bar (Left Edge) --- */
+        /* Icon Bar */
         #icon-bar {
-            position: absolute; 
-            top: 90px; /* Reserve space at top (approx 1 slot) */
-            left: 20px;
-            display: flex; 
-            flex-direction: column; /* Vertical Layout */
-            gap: 20px;
-            pointer-events: auto;
+            position: absolute; top: 90px; left: 20px;
+            display: flex; flex-direction: column; gap: 20px; pointer-events: auto;
         }
-
         .icon-btn {
-            width: 45px; height: 45px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #00f6ff;
-            border-radius: 50%;
-            color: #fff;
-            font-size: 20px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-shadow: 0 0 5px #00f6ff;
-            box-shadow: 0 0 5px #00f6ff;
+            width: 45px; height: 45px; background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00f6ff; border-radius: 50%; color: #fff;
+            font-size: 20px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; text-shadow: 0 0 5px #00f6ff; box-shadow: 0 0 5px #00f6ff;
         }
-
         .icon-btn:active { transform: scale(0.9); background: rgba(0, 246, 255, 0.3); }
         
-        /* Top Right Speedometer */
         #speed-hud { position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: none; }
 
-        /* Top Center Score & Time */
+        /* --- UPDATED: Top Center Score & Time (Stacked Vertically) --- */
         #game-stats {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            text-align: center; width: 300px; pointer-events: none;
-            display: flex; justify-content: space-around;
+            position: absolute; 
+            top: 20px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            text-align: center; 
+            width: auto; 
+            pointer-events: none;
+            display: flex; 
+            flex-direction: column; /* Changed to Vertical Stack */
+            gap: 10px; /* Space between boxes */
+            align-items: center;
             text-shadow: 2px 2px 0 #ff00de;
         }
-        .stat-box { background: rgba(0,0,0,0.5); padding: 8px 15px; border: 2px solid #ffe600; border-radius: 20px; }
+        .stat-box { 
+            background: rgba(0,0,0,0.5); 
+            padding: 8px 15px; 
+            border: 2px solid #ffe600; 
+            border-radius: 20px; 
+            min-width: 100px; /* Consistent width */
+        }
         .stat-label { font-size: 8px; color: #ffe600; display: block; margin-bottom: 3px; }
         .stat-value { font-size: 18px; color: #fff; }
 
         #speedometer { font-size: 24px; color: #ffe600; text-shadow: 2px 2px 0 #b20000; margin-bottom: 5px; }
         #turbo-text { color: #00f6ff; font-size: 10px; text-shadow: 0 0 5px #00f6ff; }
         
-        /* --- Unified D-Pad Controls (Bottom Left) --- */
+        /* D-Pad Controls */
         #touch-controls {
-            position: absolute; 
-            bottom: 30px; 
-            left: 30px; 
-            pointer-events: none; 
-            z-index: 30;
-            /* Scale down by 20% (0.8) */
-            transform: scale(0.8);
-            transform-origin: bottom left;
+            position: absolute; bottom: 30px; left: 30px; pointer-events: none; z-index: 30;
+            transform: scale(0.8); transform-origin: bottom left;
         }
-
         #d-pad-grid {
-            pointer-events: auto;
-            display: grid;
-            grid-template-columns: 65px 65px 65px; /* 3 Columns */
-            grid-template-rows: 65px 65px; /* 2 Rows */
-            gap: 8px;
+            pointer-events: auto; display: grid;
+            grid-template-columns: 65px 65px 65px; grid-template-rows: 65px 65px; gap: 8px;
         }
-
         .btn-touch {
-            width: 65px; height: 65px; 
-            background: rgba(0, 0, 0, 0.4);
-            border: 2px solid #00f6ff; 
-            border-radius: 10px; /* More square-ish like keys */
-            color: #00f6ff;
-            font-size: 30px; 
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; 
-            backdrop-filter: blur(2px); 
-            box-shadow: 0 0 10px rgba(0, 246, 255, 0.3); 
-            touch-action: manipulation;
-            user-select: none;
+            width: 65px; height: 65px; background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #00f6ff; border-radius: 10px; color: #00f6ff;
+            font-size: 30px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; backdrop-filter: blur(2px); box-shadow: 0 0 10px rgba(0, 246, 255, 0.3); 
+            touch-action: manipulation; user-select: none;
         }
-
-        .btn-touch.empty { visibility: hidden; pointer-events: none; border: none; background: none; box-shadow: none; }
-
-        .btn-touch:active, .btn-touch.active { 
-            background: rgba(0, 246, 255, 0.4); 
-            color: white; 
-            transform: scale(0.95); 
-            box-shadow: 0 0 15px #00f6ff; 
-        }
-
-        /* Acceleration/Brake keys different color hint */
-        .btn-touch[data-key="ArrowUp"], .btn-touch[data-key="ArrowDown"] {
-            border-color: #ff00de;
-            color: #ff00de;
-            box-shadow: 0 0 10px rgba(255, 0, 222, 0.3);
-        }
-        .btn-touch[data-key="ArrowUp"]:active, .btn-touch[data-key="ArrowUp"].active,
-        .btn-touch[data-key="ArrowDown"]:active, .btn-touch[data-key="ArrowDown"].active {
-            background: rgba(255, 0, 222, 0.4);
-            color: white;
-            box-shadow: 0 0 15px #ff00de;
-        }
+        .btn-touch.empty { visibility: hidden; pointer-events: none; }
+        .btn-touch:active, .btn-touch.active { background: rgba(0, 246, 255, 0.4); color: white; transform: scale(0.95); box-shadow: 0 0 15px #00f6ff; }
+        .btn-touch[data-key="ArrowUp"], .btn-touch[data-key="ArrowDown"] { border-color: #ff00de; color: #ff00de; box-shadow: 0 0 10px rgba(255, 0, 222, 0.3); }
+        .btn-touch[data-key="ArrowUp"]:active, .btn-touch[data-key="ArrowUp"].active, .btn-touch[data-key="ArrowDown"]:active, .btn-touch[data-key="ArrowDown"].active { background: rgba(255, 0, 222, 0.4); color: white; box-shadow: 0 0 15px #ff00de; }
 
         /* Screens */
         .overlay-screen {
@@ -140,7 +98,7 @@
     <h1 style="font-size: 40px; margin-bottom: 20px;">OUTRUN MIXER</h1>
     <p style="color: #ffe600; margin-bottom: 30px;">蒐集金幣 ! 60秒限時挑戰 !</p>
     <button id="start-btn" class="big-btn">點擊開始</button>
-    <p style="margin-top: 20px; font-size: 10px; color: #aaa;">手機橫向遊玩體驗最佳</p>
+    <p style="margin-top: 20px; font-size: 10px; color: #aaa;">按住「加速」進入極速領域</p>
 </div>
 
 <div id="game-over-screen" class="overlay-screen" style="display: none;">
@@ -178,7 +136,6 @@
         <div class="btn-touch empty"></div>
         <div class="btn-touch" data-key="ArrowUp">⬆</div>
         <div class="btn-touch empty"></div>
-        
         <div class="btn-touch" data-key="ArrowLeft">⬅</div>
         <div class="btn-touch" data-key="ArrowDown">⬇</div>
         <div class="btn-touch" data-key="ArrowRight">➡</div>
@@ -213,7 +170,7 @@
     };
 
     // --- State ---
-    const CONFIG = { speed: 60, turnSpeed: 0.8, tiltFactor: 0.3, fovBase: 60, fovTurbo: 90, horizonZ: -250, cameraZPass: 20, gameDuration: 60 };
+    const CONFIG = { speed: 60, turnSpeed: 0.8, tiltFactor: 0.3, fovBase: 60, fovTurbo: 100, horizonZ: -250, cameraZPass: 20, gameDuration: 60 };
     const THEMES = [
         { name: '邁阿密', sky: 0x2b0033, grid: 0xff00de, sunTop: 0xffe600, sunBot: 0xff0055, fog: 0x2b0033 },
         { name: '網路', sky: 0x001133, grid: 0x00f6ff, sunTop: 0xffffff, sunBot: 0x00f6ff, fog: 0x001133 },
@@ -242,16 +199,33 @@
     ctxGrid.strokeRect(0,0,64,64); 
     ctxGrid.beginPath(); ctxGrid.moveTo(32,0); ctxGrid.lineTo(32,64); ctxGrid.stroke();
     const gridTexture = new THREE.CanvasTexture(canvasGrid);
-    gridTexture.wrapS = THREE.RepeatWrapping;
-    gridTexture.wrapT = THREE.RepeatWrapping;
-    gridTexture.repeat.set(20, 20);
-    gridTexture.magFilter = THREE.NearestFilter; 
-
+    gridTexture.wrapS = THREE.RepeatWrapping; gridTexture.wrapT = THREE.RepeatWrapping;
+    gridTexture.repeat.set(20, 20); gridTexture.magFilter = THREE.NearestFilter; 
     const roadMat = new THREE.MeshBasicMaterial({ map: gridTexture, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
     const road = new THREE.Mesh(new THREE.PlaneGeometry(40, 300), roadMat);
-    road.rotation.x = -Math.PI / 2;
-    road.position.z = -100;
+    road.rotation.x = -Math.PI / 2; road.position.z = -100;
     scene.add(road);
+
+    // --- Warp Tunnel ---
+    const canvasTunnel = document.createElement('canvas');
+    canvasTunnel.width = 512; canvasTunnel.height = 512;
+    const ctxT = canvasTunnel.getContext('2d');
+    ctxT.fillStyle = '#000000'; ctxT.fillRect(0,0,512,512);
+    ctxT.fillStyle = '#ff0000'; ctxT.fillRect(50, 0, 10, 512); ctxT.fillRect(450, 0, 10, 512); ctxT.fillRect(150, 0, 5, 512); ctxT.fillRect(350, 0, 5, 512);
+    ctxT.fillStyle = '#ffffff'; ctxT.fillRect(100, 0, 2, 512); ctxT.fillRect(400, 0, 2, 512); ctxT.fillRect(256, 0, 4, 512);
+    ctxT.fillStyle = '#444444'; ctxT.fillRect(0, 0, 20, 512); ctxT.fillRect(492, 0, 20, 512); ctxT.fillRect(200, 0, 15, 512); ctxT.fillRect(300, 0, 15, 512);
+    ctxT.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    for(let i=0; i<512; i+=64) { ctxT.fillRect(0, i, 512, 4); }
+    
+    const tunnelTex = new THREE.CanvasTexture(canvasTunnel);
+    tunnelTex.wrapS = THREE.RepeatWrapping; tunnelTex.wrapT = THREE.RepeatWrapping;
+    tunnelTex.repeat.set(4, 4);
+    const tunnelGeo = new THREE.CylinderGeometry(60, 60, 400, 16, 1, true);
+    tunnelGeo.rotateX(-Math.PI / 2);
+    const tunnelMat = new THREE.MeshBasicMaterial({ map: tunnelTex, side: THREE.BackSide, transparent: true, opacity: 0.0 });
+    const tunnel = new THREE.Mesh(tunnelGeo, tunnelMat);
+    tunnel.position.z = -50;
+    scene.add(tunnel);
 
     // Buildings
     const buildings = [];
@@ -377,6 +351,13 @@
             truckGroup.rotation.z = gameState.steering * -CONFIG.tiltFactor; truckGroup.rotation.y = gameState.steering * 0.1; truckGroup.position.y = Math.sin(time * 20) * 0.02;
             
             gridTexture.offset.y -= gameState.speed * 0.5 * delta;
+            tunnelTex.offset.y -= gameState.speed * 0.8 * delta;
+
+            // Turbo Tunnel Logic
+            if (gameState.turbo) { tunnel.material.opacity += (1.0 - tunnel.material.opacity) * 0.1; } 
+            else { tunnel.material.opacity += (0.0 - tunnel.material.opacity) * 0.1; }
+            tunnel.visible = tunnel.material.opacity > 0.01;
+
             const moveSpeed = gameState.speed * 70 * delta;
             buildings.forEach(b => { b.position.z += moveSpeed; if (b.position.z > CONFIG.cameraZPass) { resetBuilding(b); } });
 
